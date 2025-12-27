@@ -35,34 +35,44 @@
         </div>
         
         <div class="vote-buttons">
-    {% if current_user %}
-        <a href="{{ url_for('vote', initiative_id=initiative.id, value=1, page=pagination.page) }}" 
-           class="btn-vote upvote {% if initiative.user_vote == 1 %}active{% endif %}">
-            <i class="fas fa-thumbs-up"></i> 
-            Поддержать 
-            {% if initiative.user_vote == 1 %}<span style="margin-left: 5px;">✓</span>{% endif %}
-        </a>
-        <a href="{{ url_for('vote', initiative_id=initiative.id, value=-1, page=pagination.page) }}" 
-           class="btn-vote downvote {% if initiative.user_vote == -1 %}active{% endif %}">
-            <i class="fas fa-thumbs-down"></i> 
-            Против
-            {% if initiative.user_vote == -1 %}<span style="margin-left: 5px;">✓</span>{% endif %}
-        </a>
+            {% if current_user %}
+                <a href="{{ url_for('vote', initiative_id=initiative.id, value=1, page=pagination.page) }}" 
+                   class="btn-vote upvote {% if initiative.user_vote == 1 %}active{% endif %}">
+                    <i class="fas fa-thumbs-up"></i> 
+                    Поддержать 
+                    {% if initiative.user_vote == 1 %}<span style="margin-left: 5px;">✓</span>{% endif %}
+                </a>
+                <a href="{{ url_for('vote', initiative_id=initiative.id, value=-1, page=pagination.page) }}" 
+                   class="btn-vote downvote {% if initiative.user_vote == -1 %}active{% endif %}">
+                    <i class="fas fa-thumbs-down"></i> 
+                    Против
+                    {% if initiative.user_vote == -1 %}<span style="margin-left: 5px;">✓</span>{% endif %}
+                </a>
+                
+                <!-- КНОПКИ УПРАВЛЕНИЯ - ВЫНЕСЕМ ОТДЕЛЬНО -->
+            {% else %}
+                <p style="color: #666; flex: 1;">
+                    <i class="fas fa-info-circle"></i>
+                    <a href="{{ url_for('login') }}">Войдите</a>, чтобы голосовать
+                </p>
+            {% endif %}
+        </div>
         
-        {% if current_user.id == initiative.author_id or current_user.is_admin %}
-        <a href="{{ url_for('delete', initiative_id=initiative.id, page=pagination.page) }}" 
-           class="btn-delete"
-           onclick="return confirm('Удалить инициативу «{{ initiative.title }}»?')">
-            <i class="fas fa-trash"></i> Удалить
-        </a>
-        {% endif %}
-    {% else %}
-        <p style="color: #666; flex: 1;">
-            <i class="fas fa-info-circle"></i>
-            <a href="{{ url_for('login') }}">Войдите</a>, чтобы голосовать
-        </p>
-    {% endif %}
-</div>
+        <!-- ОТДЕЛЬНЫЙ БЛОК ДЛЯ КНОПОК УДАЛЕНИЯ И РЕДАКТИРОВАНИЯ -->
+        <div class="action-buttons">
+            {% if current_user %}
+                {% if current_user.id == initiative.author_id or current_user.is_admin %}
+                    <a href="{{ url_for('edit_initiative', initiative_id=initiative.id) }}" 
+                       class="btn-edit">
+                        <i class="fas fa-edit"></i> Редактировать
+                    </a>
+                    <a href="{{ url_for('delete', initiative_id=initiative.id, page=pagination.page) }}" 
+                       class="btn-delete"
+                       onclick="return confirm('Удалить инициативу «{{ initiative.title }}»?')">
+                        <i class="fas fa-trash"></i> Удалить
+                    </a>
+                {% endif %}
+            {% endif %}
         </div>
         
         {% if initiative.score <= -5 %}

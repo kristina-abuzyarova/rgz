@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import os
-import random
+import randomg
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
@@ -185,6 +185,49 @@ def create():
         return redirect(url_for('index'))
     
     return render_template('create.html', student_info=STUDENT_INFO)
+
+# ============= НОВЫЙ МАРШРУТ: РЕДАКТИРОВАНИЕ =============
+@app.route('/edit/<int:initiative_id>', methods=['GET', 'POST'])
+def edit_initiative(initiative_id):
+    current_user = get_current_user()
+    if not current_user:
+        flash('Для редактирования нужно войти в систему', 'error')
+        return redirect(url_for('login'))
+    
+    initiative = Initiative.query.get_or_404(initiative_id)
+    
+    # Проверка прав: только автор или администратор
+    if current_user.id != initiative.user_id and not current_user.is_admin:
+        flash('Вы не можете редактировать эту инициативу', 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        content = request.form.get('content', '').strip()
+        
+        if not title or not content:
+            flash('Заполните все поля', 'error')
+            return render_template('edit.html', 
+                                 initiative=initiative,
+                                 student_info=STUDENT_INFO,
+                                 current_user=current_user)
+        
+        # Сохраняем старые данные для сообщения
+        old_title = initiative.title
+        
+        # Обновляем инициативу
+        initiative.title = title
+        initiative.content = content
+        
+        db.session.commit()
+        
+        flash(f'Инициатива "{old_title}" успешно обновлена!', 'success')
+        return redirect(url_for('index'))
+    
+    return render_template('edit.html', 
+                         initiative=initiative,
+                         student_info=STUDENT_INFO,
+                         current_user=current_user)
 
 @app.route('/vote/<int:initiative_id>/<int:value>')
 def vote(initiative_id, value):
@@ -429,48 +472,4 @@ if __name__ == '__main__':
     
     app.run(debug=True, port=5000)
 
-@app.route('/')
-def index():
-    page = request.args.get('page', 1, type=int)
     
-    initiatives_query = Initiative.query.order_by(
-        Initiative.created_at.desc()
-    ).paginate(
-        page=page, 
-        per_page=app.config['INITIATIVES_PER_PAGE'],
-        error_out=False
-    )
-    
-    current_user = get_current_user()
-    
-    # Получаем голоса текущего пользователя для ВСЕХ инициатив на странице
-    user_votes = {}
-    if current_user:
-        # Получаем все голоса пользователя за инициативы на текущей странице
-        initiative_ids = [initiative.id for initiative in initiatives_query.items]
-        votes = Vote.query.filter(
-            Vote.user_id == current_user.id,
-            Vote.initiative_id.in_(initiative_ids)
-        ).all()
-        
-        for vote in votes:
-            user_votes[vote.initiative_id] = vote.value
-    
-    initiatives_data = []
-    for initiative in initiatives_query.items:
-        initiatives_data.append({
-            'id': initiative.id,
-            'title': initiative.title,
-            'content': initiative.content,
-            'score': initiative.score,
-            'created_at': initiative.created_at,
-            'author': initiative.author,
-            'author_id': initiative.user_id,
-            'user_vote': user_votes.get(initiative.id)  # 1, -1 или None
-        })
-    
-    return render_template('index.html', 
-                         initiatives=initiatives_data,
-                         pagination=initiatives_query,
-                         current_user=current_user,
-                         student_info=STUDENT_INFO)
